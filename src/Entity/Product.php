@@ -3,12 +3,17 @@
 namespace App\Entity;
 
 use App\Repository\ProductRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 
+#[ORM\InheritanceType("SINGLE_TABLE")]
+#[ORM\DiscriminatorColumn(name: "type", type:"string")]
+#[ORM\DiscriminatorMap(["product" => "Product", "laptop" => "Laptop", "desk" => "Desk"])]
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
-class Product
+abstract class Product
 {
 
 
@@ -26,11 +31,11 @@ class Product
     )]
     private $name;
 
-    #[ORM\Column(type: 'integer')]
-    private $type;
-
     #[ORM\ManyToOne(targetEntity: Category::class, inversedBy: 'products')]
     private $category;
+
+    #[ORM\ManyToMany(targetEntity: Invoice::class, inversedBy: 'products')]
+    private $invoices;
 
     // ...
     /**
@@ -38,10 +43,10 @@ class Product
      * @param $name
      * @param $type
      */
-    public function __construct($name, $type)
+    public function __construct($name)
     {
         $this->name = $name;
-        $this->type = $type;
+        $this->invoices = new ArrayCollection();
     }
 
 
@@ -85,4 +90,31 @@ class Product
 
         return $this;
     }
+
+    /**
+     * @return Collection<int, Invoice>
+     */
+    public function getInvoices(): Collection
+    {
+        return $this->invoices;
+    }
+
+    public function addInvoice(Invoice $invoice): self
+    {
+        if (!$this->invoices->contains($invoice)) {
+            $this->invoices[] = $invoice;
+        }
+
+        return $this;
+    }
+
+    public function removeInvoice(Invoice $invoice): self
+    {
+        $this->invoices->removeElement($invoice);
+
+        return $this;
+    }
+
+    protected abstract function calcName();
+
 }
